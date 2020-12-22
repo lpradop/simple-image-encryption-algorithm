@@ -16,6 +16,7 @@ class dynamic_matrix {
 public:
   dynamic_matrix() = default;
   dynamic_matrix(SizeType rows, SizeType columns) noexcept;
+  dynamic_matrix(DataType* data, SizeType rows, SizeType columns) noexcept;
   dynamic_matrix(dynamic_matrix const&) noexcept;
   dynamic_matrix(dynamic_matrix&&) noexcept;
   dynamic_matrix(std::initializer_list<std::initializer_list<DataType>> il);
@@ -53,6 +54,13 @@ dynamic_matrix<DataType, SizeType>::dynamic_matrix(
     : size_{ordered_pair<SizeType, SizeType>{rows, columns}},
       matrix_data_size_{size_.x * size_.y},
       matrix_data_{new DataType[matrix_data_size_]{}} {}
+
+template <concepts::numeric DataType, concepts::numeric SizeType>
+dynamic_matrix<DataType, SizeType>::dynamic_matrix(
+    DataType* data, SizeType const rows, SizeType const columns) noexcept
+    : matrix_data_{data}, size_{ordered_pair<SizeType, SizeType>{rows,
+                                                                 columns}},
+      matrix_data_size_{size_.x * size_.y} {}
 
 template <concepts::numeric DataType, concepts::numeric SizeType>
 dynamic_matrix<DataType, SizeType>::dynamic_matrix(

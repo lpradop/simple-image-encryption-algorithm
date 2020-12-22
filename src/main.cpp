@@ -5,37 +5,51 @@
 
 using brocolio::container::dynamic_matrix;
 
+struct image {
+  unsigned char* data{nullptr};
+  int width{0};
+  int height{0};
+  int channels{0};
+};
+int rgb_to_decimal(unsigned char r, unsigned char g, unsigned char b) {
+  return (r << 16) | (g << 8) | b;
+}
 
-int rgb_to_hex(unsigned char r, unsigned char g, unsigned char b)
-{
-    return (r<<16) | (g<<8) | b;
+image load_image(char const* filename) {
+  image tmp{};
+  tmp.data = stbi_load(filename, &tmp.width, &tmp.height, &tmp.channels, 0);
+  if (tmp.data == nullptr) {
+    throw std::runtime_error{"unable to load the image"};
+  }
+  return tmp;
+};
+
+dynamic_matrix<> creat_matrix_from_image(image const& img) {
+  int const number_of_pixels{img.width * img.height};
+  auto decimal_data{new int[number_of_pixels]};
+
+  int i{0};
+  int j{0};
+  while (i < number_of_pixels) {
+    decimal_data[i] =
+        rgb_to_decimal(img.data[j], img.data[j + 1], img.data[j + 2]);
+    j += 3;
+    ++i;
+  }
+
+  dynamic_matrix<> tmp{decimal_data, static_cast<unsigned int>(img.width),
+                       static_cast<unsigned int>(img.height)};
+
+  return std::move(tmp);
 }
 
 int main() {
+  auto img{load_image("../test.jpg")};
+  auto pixel_matrix{creat_matrix_from_image(img)};
+  stbi_image_free(img.data);
 
-  int width, height, channels;
-  // unsigned char
-  auto img{stbi_load("../test.jpg", &width, &height, &channels, 0)};
-  //0 255
-
-  for (int i{0}; i < 9; i+=3) {
-    std::cout << rgb_to_hex(img[i], img[i+1], img[i+2]) << std::endl;
-  }
 
   // lectura en orde matricial
-
-
-
-  dynamic_matrix<float> image{static_cast<unsigned int>(width),
-                              static_cast<unsigned int>(height)};
-  if (img == NULL) {
-    printf("Error in loading the image\n");
-    exit(1);
-  }
-  printf(
-      "Loaded image with a width of %dpx, a height of %dpx and %d channels\n",
-      width, height, channels);
-
   // ...
   // AES
 
