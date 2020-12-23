@@ -35,6 +35,7 @@ public:
   SizeType columns() const noexcept { return size_.y; };
 
   void print() const noexcept;
+  DataType* get() const noexcept { return matrix_data_; }
   void resize(SizeType rows, SizeType columns); // TODO
   dynamic_matrix transpose() const noexcept;    // todo
 
