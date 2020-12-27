@@ -13,4 +13,4 @@ set(CMAKE_CXX_FLAGS "-mavx2 -mfma")
 
 include_directories(${PROJECT_SOURCE_DIR}/include)
 
-add_executable(main src/main.cpp)
+add_executable(main src/main.cpp src/image_cipher.cpp)
