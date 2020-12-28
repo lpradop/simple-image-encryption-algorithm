@@ -1,5 +1,6 @@
 #include "image_cipher.hpp"
-
+// genera una secuencia pseudo aleatoria de enteros, cuyos valores se encuentran
+// en [0, 2^24)
 std::vector<unsigned int> generate_key_sequence(unsigned int size, double x_0,
                                                 double lambda) {
   logistic_chaotic_map map{x_0, lambda};
@@ -10,6 +11,9 @@ std::vector<unsigned int> generate_key_sequence(unsigned int size, double x_0,
   }
   return std::move(sequence);
 }
+
+// crea un vector de enteros a partir de los datos cargados por stbi_load, para
+// cada tripleta r,g,b se realiza la conversion respectiva
 std::vector<unsigned int> create_vector_from_image(image const& img) {
   std::vector<unsigned int> tmp{};
   tmp.resize(img.height * img.width);
@@ -33,6 +37,8 @@ rgb_color decimal_to_rgb(unsigned int color) {
                    static_cast<uint8_t>(color & 0x0000ff)};
 }
 
+// wrapper para stbi_load, carga la imagen en la memoria y returna la estructura
+// image correspondiente
 image load_image(char const* filename) {
   image tmp{};
   tmp.data = stbi_load(filename, &tmp.width, &tmp.height, &tmp.channels, 3);
@@ -42,10 +48,12 @@ image load_image(char const* filename) {
   return tmp;
 };
 
+// guarda la imagen
 void write_image(char const* filename, image const& img) {
   stbi_write_png(filename, img.width, img.height, 3, img.data, img.width * 3);
 }
 
+// carga la llave, genera x_0 y lambda y a partir de ello genera el vector llave
 std::vector<unsigned int> create_vector_from_key(char const* filename,
                                                  int size) {
   std::ifstream key_file{filename};
@@ -55,6 +63,8 @@ std::vector<unsigned int> create_vector_from_key(char const* filename,
   return std::move(generate_key_sequence(size, x_0, lambda));
 }
 
+// almacena los pixeles de un vector dado en una estructura image dada (para
+// cada pixel del vector se realiza la conversion a rgb)
 void vector_to_raw_data(std::vector<unsigned int> const& pixel_vector,
                         image const& img) {
 
@@ -68,6 +78,7 @@ void vector_to_raw_data(std::vector<unsigned int> const& pixel_vector,
   }
 }
 
+// dado un string genera x_0 y lambda usando los 10 primeros caracteres
 std::pair<double, double> generate_seed_and_lambda(std::string key) {
   double lambda{0};
   std::bitset<40> even_bits{};
