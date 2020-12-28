@@ -25,9 +25,11 @@ public:
   dynamic_matrix& operator=(dynamic_matrix const&) noexcept;
   dynamic_matrix& operator=(dynamic_matrix&&) noexcept;
   dynamic_matrix operator+(dynamic_matrix const& rhs) const;
+  dynamic_matrix operator^(dynamic_matrix const& rhs) const;
   dynamic_matrix operator*(dynamic_matrix const& rhs) const;
   dynamic_matrix& operator+=(dynamic_matrix const& rhs);
   dynamic_matrix& operator*=(dynamic_matrix const& rhs);
+  dynamic_matrix& operator^=(dynamic_matrix const& rhs);
   DataType& operator()(SizeType i, SizeType j) const;
 
   ordered_pair<SizeType, SizeType> size() const noexcept { return size_; }
@@ -144,6 +146,80 @@ DataType&
 dynamic_matrix<DataType, SizeType>::operator()(SizeType const i,
                                                SizeType const j) const {
   return matrix_data_[size_.x * i + j];
+}
+
+template <concepts::numeric DataType, concepts::numeric SizeType>
+dynamic_matrix<DataType, SizeType>&
+dynamic_matrix<DataType, SizeType>::operator^=(dynamic_matrix const& rhs) {
+
+  if (size_ == rhs.size_) {
+
+    SizeType const partial_bound{matrix_data_size_ / block_size_};
+    SizeType const remainder_bound{matrix_data_size_ % block_size_};
+    int arr_mask[block_size_]{};
+    auto block_lhs_pointer{matrix_data_};
+    auto block_rhs_pointer{rhs.matrix_data_};
+
+    for (SizeType i{0}; i < remainder_bound; ++i) {
+      arr_mask[i] = -1;
+    }
+
+    for (SizeType i{0}; i < partial_bound; ++i) {
+
+      if constexpr (std::is_same_v<DataType, float>) {
+        auto simd_lhs{_mm256_loadu_ps(block_lhs_pointer)};
+        auto simd_rhs{_mm256_loadu_ps(block_rhs_pointer)};
+        simd_lhs = _mm256_xor_ps(simd_lhs, simd_rhs);
+        _mm256_storeu_ps(block_lhs_pointer, simd_lhs);
+
+      } else if (std::is_same_v<DataType, int>) {
+        auto simd_lhs{_mm256_loadu_si256(
+            reinterpret_cast<__m256i_u*>(block_lhs_pointer))};
+        auto simd_rhs{_mm256_loadu_si256(
+            reinterpret_cast<__m256i_u*>(block_rhs_pointer))};
+
+        simd_lhs = _mm256_xor_si256(simd_lhs, simd_rhs);
+        _mm256_storeu_si256(reinterpret_cast<__m256i_u*>(block_rhs_pointer),
+                            simd_lhs);
+      }
+
+      block_lhs_pointer += block_size_;
+      block_rhs_pointer += block_size_;
+    }
+
+    if (remainder_bound != 0) {
+      auto mask{_mm256_loadu_si256(reinterpret_cast<__m256i_u*>(arr_mask))};
+
+      if constexpr (std::is_same_v<DataType, float>) {
+        auto simd_lhs{_mm256_maskload_ps(block_lhs_pointer, mask)};
+        auto simd_rhs{_mm256_maskload_ps(block_rhs_pointer, mask)};
+        simd_lhs = _mm256_xor_ps(simd_lhs, simd_rhs);
+        _mm256_maskstore_ps(block_lhs_pointer, mask, simd_lhs);
+
+      } else if (std::is_same_v<DataType, int>) {
+        auto simd_lhs{_mm256_maskload_epi32(block_lhs_pointer, mask)};
+        auto simd_rhs{_mm256_maskload_epi32(block_rhs_pointer, mask)};
+        simd_lhs = _mm256_xor_si256(simd_lhs, simd_rhs);
+        _mm256_maskstore_epi32(block_lhs_pointer, mask, simd_lhs);
+      }
+    }
+
+    return *this;
+  } else {
+    throw std::length_error{"matrices cannot be added"};
+  }
+}
+
+template <concepts::numeric DataType, concepts::numeric SizeType>
+dynamic_matrix<DataType, SizeType>
+dynamic_matrix<DataType, SizeType>::operator^(dynamic_matrix const& rhs) const {
+  if (size_ == rhs.size_) {
+    dynamic_matrix<DataType, SizeType> result{*this};
+    result ^= rhs;
+    return result;
+  } else {
+    throw std::length_error{"matrices cannot be xored"};
+  }
 }
 
 template <concepts::numeric DataType, concepts::numeric SizeType>

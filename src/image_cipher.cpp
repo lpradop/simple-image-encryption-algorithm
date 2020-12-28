@@ -1,21 +1,10 @@
 #include "image_cipher.hpp"
 
-double logistic_chaotic_map(int n, double x_0, double r) {
-  static std::vector<double> terms{x_0};
-
-  while (n >= terms.size()) {
-    auto const& last_term{terms[terms.size() - 1]};
-    terms.push_back(r * last_term * (1 - last_term));
-  }
-
-  return terms[n];
-}
-
-int* generate_key_sequence(int size, double x_0, double r) {
+int* generate_key_sequence(unsigned int size, double x_0, double lambda) {
+  logistic_chaotic_map map{x_0, lambda};
   auto sequence{new int[size]{}};
-  for (int i{0}; i < size; ++i) {
-    sequence[i] =
-        static_cast<int>(0x1'000'000 * logistic_chaotic_map(i, x_0, r));
+  for (unsigned int i{0}; i < size; ++i) {
+    sequence[i] = static_cast<int>(0x1'000'000 * map(i));
   }
   return sequence;
 }
@@ -43,7 +32,7 @@ void write_image(char const* filename, image const& img) {
   stbi_write_jpg(filename, img.width, img.height, img.channels, img.data, 100);
 }
 
-matrix creat_matrix_from_image(image const& img) {
+matrix create_matrix_from_image(image const& img) {
   int const number_of_pixels{img.width * img.height};
   auto decimal_data{new int[number_of_pixels]};
 
@@ -73,4 +62,42 @@ void matrix_to_raw_data(matrix const& m, image const& img) {
       k += 3;
     }
   }
+}
+
+matrix create_matrix_from_key(char const* filename, unsigned int rows,
+                              unsigned int columns) {
+  std::ifstream key_file{filename};
+  std::string key{};
+  std::getline(key_file, key);
+  auto [x_0, lambda]{generate_seed_and_lambda(key)};
+
+  matrix tmp{generate_key_sequence(rows * columns, x_0, lambda), rows, columns};
+
+  return std::move(tmp);
+}
+
+std::pair<double, double> generate_seed_and_lambda(std::string key) {
+  double lambda{0};
+  std::bitset<40> even_bits{};
+  std::bitset<40> odd_bits{};
+  for (int i{0}; i < 10; ++i) {
+    std::bitset<8> bitform_key{static_cast<unsigned long long>(key[i])};
+    lambda += static_cast<double>(key[i]);
+    for (int k{0}; k < 8; k += 2) {
+      even_bits[i * 8 + k] = bitform_key[k];
+      even_bits[i * 8 + k + 1] = bitform_key[k + 1];
+    }
+  }
+  lambda = (lambda / 0x8'000) + 3.875;
+
+  double seed{static_cast<double>(even_bits.to_ulong() + odd_bits.to_ulong())};
+  seed /= 0x10'000'000'000; // 2^40
+  double tmp{};
+  seed = std::modf(seed, &tmp);
+  std::cout << seed << std::endl;
+  std::cout << lambda << std::endl;
+  if (seed == 0) {
+    seed += 0.5;
+  }
+  return std::make_pair(seed, lambda);
 }
