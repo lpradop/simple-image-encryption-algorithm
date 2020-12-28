@@ -13,4 +13,4 @@ set(CMAKE_CXX_FLAGS "-O3")
 
 include_directories(${PROJECT_SOURCE_DIR}/include)
 
-add_executable(main src/main.cpp src/image_cipher.cpp src/logistic_chaotic_map.cpp)
+add_executable(image-cipher src/main.cpp src/image_cipher.cpp src/logistic_chaotic_map.cpp)
