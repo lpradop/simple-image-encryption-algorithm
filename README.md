@@ -1,5 +1,6 @@
 # Overview
-**in development** an easy to implement yet effective algorithm for image ciphering
+**in development**  
+An easy to implement yet effective algorithm for image ciphering
 
 ## Original images
 ![a](test/a.png)
